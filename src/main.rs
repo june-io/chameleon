@@ -1,13 +1,15 @@
-use chameleon::compression;
+use chameleon::compression::{self, LempelZiv};
 use std::error::Error;
+use std::fs;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let file = compression::GzipFile::build("./data/zlib/sunbears.gz")?;
+    let file = compression::GzipFile::build("./data/gzip/sunbears.gz")?;
 
-    println!(
-        "{:?}",
-        compression::parse_block_header(file.deflate_blocks[0])
-    );
+    let uncompressed_file = fs::read("./data/gzip/sunbears")?;
+
+    let mut lzss = LempelZiv::new(uncompressed_file);
+
+    lzss.compress();
 
     Ok(())
 }
