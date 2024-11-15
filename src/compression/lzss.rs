@@ -1,42 +1,5 @@
-use std::{
-    cell::RefCell,
-    fs, io,
-    ops::{Deref, DerefMut},
-    path::Path,
-    rc::Rc,
-};
-
-//      +------+
-//      | GZIP |
-//      +------+
-
-pub struct GzipFile {
-    pub header: Vec<u8>,
-    pub deflate_blocks: Vec<u8>,
-    pub footer: Vec<u8>,
-}
-
-impl GzipFile {
-    pub fn build<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let file_bytes = fs::read(path.as_ref())?;
-
-        // name:    MAGIC1  MAGIC2  CM      FLAGS   MTIME   XFL     OS
-        // bytes:   1       1       1       1       4       1       1
-        let header = file_bytes[0..10].to_vec();
-        let deflate_blocks = file_bytes[10..file_bytes.len() - 8].to_vec();
-        let footer = file_bytes[file_bytes.len() - 8..file_bytes.len()].to_vec();
-
-        Ok(GzipFile {
-            header,
-            deflate_blocks,
-            footer,
-        })
-    }
-}
-
-//      +------+
-//      | LZSS |
-//      +------+
+//! An implementation of the LZSS algorithm which works with the
+//! DEFLATE algorithm
 
 /// Representation of the length codes given in section 3.2.5 of RFC 1951.
 /// In the format:
@@ -184,7 +147,14 @@ impl LempelZiv {
                 if check_for.len() > 1 {
                     index = self.in_array(&check_for[0..check_for.len() - 1], &search_buffer);
                     let offset = i as isize - index - check_for.len() as isize;
-                    println!("<{}, {}>", offset, check_for.len());
+                    let length = check_for.len();
+
+                    let token = format!("{}, {}", offset, length);
+                    if token.len() > length {
+                        println!("{}, {}", i, byte as char);
+                    } else {
+                        println!("{}", token);
+                    }
                 } else {
                     println!("{}, {}", i, byte as char);
                 }
@@ -229,69 +199,4 @@ impl LempelZiv {
         }
         -1
     }
-}
-
-//      +--------------------------------+
-//      | HUFFMAN TREES AND PREFIX CODES |
-//      +--------------------------------+
-
-//      +---------+
-//      | DEFLATE |
-//      +---------+
-
-/// Accepts the first byte of a DEFLATE block and extracts
-/// the BFINAL and BTYPE values.
-///
-/// The first three bits of a DEFLATE block contain if the
-/// block is the last and what type it is. The types are
-/// as follows:
-///
-///     00 - Block Type 0: Store
-///             This block type stores uncompressed data. The header contains not
-///         only the regular three bits but also the length, and somewhat bizarrely
-///         the bitwise complement of the length. There is also 5 bits of padding
-///         added after the first three bits to byte-align the bitstream.
-///
-///             BFINAL  BTYPE   PAD     LEN    ~LEN    BITSTREAM...
-///             1 bit   2 bits  5 bits  16 bits 16 bits
-///     
-///     01 - Block Type 1: LZSS with Fixed Codes
-///             This block type stores data which has been compressed using the
-///         LZSS algorithm, a derivative of the LZ77 data compression algorithm.
-///         Then, the data is compressed further using a fixed set of prefix codes.
-///
-///             BFINAL  BTYPE   BITSTREAM... EOB
-///             1 bit   2 bits               9 bits
-///
-///     10 - Block Type 2: LZSS with Dynamic Codes
-///             This block type once more uses the LZSS algorithm to compress data,
-///         then uses dynamically created codes.
-///
-///             BFINAL  BTYPE   BITSTREAM... EOB
-///             1 bit   2 bits               9 bits
-///
-/// # Arguments
-///
-/// * 'byte' - An u8 representing the first byte of the block.
-///
-/// # Returns
-///
-/// A tuple containing BFINAL as a bool in the first field,
-/// and BTYPE as an u8 in the second field.
-pub fn parse_block_header(byte: u8) -> (bool, u8) {
-    // Grab the first bit.
-    let bfinal = (byte & 0b0000_0001) != 0;
-    // Grab the second and third bits.
-    let btype = (byte & 0b0000_0110) >> 1;
-
-    (bfinal, btype)
-}
-
-pub fn decompress<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
-    let path = path.as_ref();
-    let file_bytes = fs::read(path)?;
-
-    println!("{:?}", file_bytes);
-
-    Ok(file_bytes)
 }
