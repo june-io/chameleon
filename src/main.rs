@@ -1,21 +1,18 @@
-use chameleon::compression::huffman::{Coder, Huffman};
+use chameleon::bits::bitstream::BitStream;
 use std::error::Error;
 use std::fs;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let file = fs::read("./data/sunbears.txt").unwrap();
+    let mut bitstre = BitStream::new();
 
-    let sunbear_huffman = Huffman::encode(&file).unwrap();
+    bitstre.len = 11;
+    bitstre.bytes = vec![255u8, 0b1110_0000];
 
-    let sunbear_decoded = Huffman::decode(&sunbear_huffman).unwrap();
+    println!("{}", bitstre);
 
-    println!(
-        "Before: {} bytes\n After: {} bytes\n Decoded: {} bytes",
-        file.len(),
-        sunbear_huffman.len(),
-        sunbear_decoded.len()
-    );
-
-    println!("Before == Decoded: {:?}", (file == sunbear_decoded));
+    for _ in 0..10 {
+        bitstre.push(1);
+    }
+    println!("{}", bitstre);
     Ok(())
 }

@@ -1,7 +1,7 @@
 use std::{
     cell::RefCell,
     cmp::{Ordering, Reverse},
-    collections::BinaryHeap,
+    collections::{BinaryHeap, HashMap},
     error::Error,
     rc::Rc,
 };
@@ -343,4 +343,27 @@ impl Coder<u8, u8> for Huffman {
         let _ = root;
         Ok(output)
     }
+}
+
+//      +---------------------+
+//      | FIXED HUFFMAN CODES |
+//      +---------------------+
+
+/// For block type 1, the bitstream after LZSS compression is encoded
+/// with the following table from RFC 1951. Instead of generating a
+/// Huffman tree for this, a hashmap will save some complexity while
+/// not compromising too much on speed.
+///
+///  Lit Value    Bits        Codes
+///  ---------    ----        -----
+///  0 - 143       8          00110000 through
+///                           10111111
+///  144 - 255     9          110010000 through
+///                           111111111
+///  256 - 279     7          0000000 through
+///                           0010111
+///  280 - 287     8          11000000 through
+///                           11000111
+pub fn generate_fixed_huffman() {
+    todo!();
 }
